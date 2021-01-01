@@ -30,13 +30,17 @@ void main() {
     test('Add a task to hive and read it', () async {
       var task;
       task = taskFromDescription('hello world');
-      storage.addTask(task);
+      await storage.addTask(task);
       task = taskFromDescription('foo bar');
-      storage.addTask(task);
-      (await storage.getTasks()).entries.forEach((entry) {
-        print(entry.key);
-        print(entry.value.toJson());
-      });
+      await storage.addTask(task);
+      // (await storage.getTasks()).entries.forEach((entry) {
+      //   print(entry.key);
+      //   print(entry.value.toJson());
+      // });
+      await storage.synchronize();
+      task = taskFromDescription('baz');
+      await storage.addTask(task);
+      await storage.synchronize();
       await storage.synchronize();
     });
   });
@@ -56,6 +60,10 @@ class Storage {
     var _certificate = 'fixture/.task/first_last.cert.pem';
     var _key = 'fixture/.task/first_last.key.pem';
     var _ca = 'fixture/.task/ca.cert.pem';
+
+    await Directory('${_home.path}/.task/').delete(recursive: true);
+    await Directory('${_home.path}/.task/').create();
+
     _box = await Hive.openBox(
       'tasks',
       bytes: Uint8List(0),
@@ -76,15 +84,45 @@ class Storage {
     );
   }
 
-  Future<Response> synchronize() async {
-    return taskc.synchronize(
+  Future<bool> synchronize() async {
+    var response = await taskc.synchronize(
       connection: _connection,
       credentials: _credentials,
-      payload: '',
+      payload: File('${_home.path}/.task/backlog.data').readAsStringSync(),
     );
+    var header = response.header;
+    var payload = response.payload;
+    switch (header['code']) {
+      case '200':
+        var userKey = payload.userKey;
+        var tasks = payload.tasks.map(
+          (task) => Task.fromJson(json.decode(task)),
+        );
+        tasks.forEach((task) {
+          _box.put(task.uuid, task);
+        });
+        File('${_home.path}/.task/backlog.data').writeAsStringSync(
+          '$userKey\n',
+        );
+        print(header['status']);
+        return true;
+        break;
+      case '201':
+        print(header['status']);
+        return false;
+        break;
+      default:
+        throw Exception(header);
+    }
   }
 
-  Future<void> addTask(Task task) => _box.put(task.uuid, task);
+  Future<void> addTask(Task task) async {
+    await _box.put(task.uuid, task);
+    await File('${_home.path}/.task/backlog.data').writeAsString(
+      '${json.encode(task.toJson())}\n',
+      mode: FileMode.append,
+    );
+  }
 
   Future<Map> getTasks() => Future.value(_box.toMap());
 }
