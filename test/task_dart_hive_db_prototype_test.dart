@@ -6,7 +6,8 @@ import 'package:hive/hive.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:taskc/taskc.dart';
+import 'package:taskc/taskc.dart' as taskc show synchronize;
+import 'package:taskc/taskc.dart' hide synchronize;
 
 import 'package:task_dart_hive_db_prototype/task_dart_hive_db_prototype.dart';
 
@@ -36,6 +37,7 @@ void main() {
         print(entry.key);
         print(entry.value.toJson());
       });
+      await storage.synchronize();
     });
   });
 }
@@ -45,11 +47,40 @@ class Storage {
 
   final Directory _home;
   var _box;
+  var _connection;
+  var _credentials;
 
   Future<void> initialize() async {
+    var _address = 'localhost';
+    var _port = 53589;
+    var _certificate = 'fixture/.task/first_last.cert.pem';
+    var _key = 'fixture/.task/first_last.key.pem';
+    var _ca = 'fixture/.task/ca.cert.pem';
     _box = await Hive.openBox(
       'tasks',
       bytes: Uint8List(0),
+    );
+    _connection = Connection(
+      address: _address,
+      port: _port,
+      context: SecurityContext()
+        ..useCertificateChain(_certificate)
+        ..usePrivateKey(_key)
+        ..setTrustedCertificates(_ca),
+      onBadCertificate: Platform.isMacOS ? (_) => true : null,
+    );
+    _credentials = Credentials.fromString(
+      parseTaskrc(
+        File('fixture/.taskrc').readAsStringSync(),
+      )['taskd.credentials'],
+    );
+  }
+
+  Future<Response> synchronize() async {
+    return taskc.synchronize(
+      connection: _connection,
+      credentials: _credentials,
+      payload: '',
     );
   }
 
