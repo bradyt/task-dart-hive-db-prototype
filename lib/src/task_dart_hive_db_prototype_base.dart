@@ -41,8 +41,9 @@ class Storage {
 
     _box = await Hive.openBox(
       'tasks',
-      bytes: Uint8List(0),
+      path: '${_home.path}/tasks.hivedb',
     );
+
     _connection = Connection(
       address: address,
       port: port,
@@ -70,7 +71,7 @@ class Storage {
           (task) => Task.fromJson(json.decode(task)),
         );
         tasks.forEach((task) {
-          _box.put(task.uuid, task);
+          _box.put(task.uuid, task.toJson());
         });
         File('${_home.path}/.task/backlog.data').writeAsStringSync(
           '$userKey\n',
@@ -88,7 +89,7 @@ class Storage {
   }
 
   Future<void> addTask(Task task) async {
-    await _box.put(task.uuid, task);
+    await _box.put(task.uuid, task.toJson());
     await File('${_home.path}/.task/backlog.data').writeAsString(
       '${json.encode(task.toJson())}\n',
       mode: FileMode.append,

@@ -49,6 +49,8 @@ void main() {
       await storage.addTask(task);
       await storage.synchronize();
       await storage.synchronize();
+      var tasks = await storage.getTasks();
+      expect(tasks.length > 0, true);
     });
   });
 }
