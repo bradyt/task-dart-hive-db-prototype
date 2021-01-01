@@ -41,21 +41,21 @@ void main() {
 }
 
 class Storage {
-  Storage(this.home);
+  Storage(this._home);
 
-  final Directory home;
-  var box;
+  final Directory _home;
+  var _box;
 
   Future<void> initialize() async {
-    box = await Hive.openBox(
+    _box = await Hive.openBox(
       'tasks',
       bytes: Uint8List(0),
     );
   }
 
-  Future<void> addTask(Task task) => box.put(task.uuid, task);
+  Future<void> addTask(Task task) => _box.put(task.uuid, task);
 
-  Future<Map> getTasks() => Future.value(box.toMap());
+  Future<Map> getTasks() => Future.value(_box.toMap());
 }
 
 // class TaskAdapter extends TypeAdapter<Task> {
