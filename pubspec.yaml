@@ -7,6 +7,9 @@ environment:
 dependencies:
   hive:
   path:
+  taskc:
+    git:
+      url: https://github.com/bradyt/taskd-client-dart.git
 
 dev_dependencies:
   pedantic:
