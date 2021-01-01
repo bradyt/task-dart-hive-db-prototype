@@ -1,0 +1,4 @@
+/.task/
+/.taskrc
+/pki/*.pem
+/var/
